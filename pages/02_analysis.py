@@ -143,3 +143,23 @@ with tab1:
 
     # 오른쪽 컬럼: 쉬운 코스
     show_top5_list(col2, "가장 쉬운 코스 TOP 5", "💧", top_easy, "blue")
+with tab2:
+    st.subheader("등산로 길이 분포")
+    fig = px.histogram(df, x='총거리_km', nbins=20,
+                       labels={'총거리_km': '총거리 (km)', 'count': '코스 개수'},
+                       color_discrete_sequence=['teal'])
+    
+    st.plotly_chart(fig, use_container_width=True)
+with tab3:
+    st.subheader("등산로 고도 분포")
+    fig = px.histogram(df, x='최고고도_m', nbins=20,
+                       labels={'최고고도_m': '최고고도 (m)', 'count': '코스 개수'},
+                       color_discrete_sequence=['orange'])
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+# =============================================================================
+# 산 분석
+st.divider()
+st.header("2. 🏔️ 산 분석")
+tab1, tab2 = st.tabs(["관광 인프라", "매력"])
