@@ -24,34 +24,40 @@ st.set_page_config(
 # 페이지 정의 (st.Page)
 # =============================================================================
 home_page = st.Page(
-    page="pages/home.py",
+    page="pages/01_home.py",
     title="홈",
     icon="🏠",
     default=True
 )
 
-# analysis_page = st.Page(
-#     page="pages/02_analysis.py",
-#     title="분석 페이지",
-#     icon="🥾"
-# )
+analysis_page = st.Page(
+    page="pages/02_analysis.py",
+    title="분석 페이지",
+    icon="🥾"
+)
 
-# trail_page = st.Page(
-#     page="pages/03_trail.py.py",
-#     title="등산로 조회 페이지",
-#     icon="🔍"
-# )
+trail_page = st.Page(
+    page="pages/03_trail.py",
+    title="등산로 조회 페이지",
+    icon="🔍"
+)
 
-# mountain_page = st.Page(
-#     page="pages/04_mountain.py",
-#     title="산 조회 페이지",
-#     icon="⛰️"
-# )
+mountain_page = st.Page(
+    page="pages/04_mountain.py",
+    title="산 조회 페이지",
+    icon="⛰️"
+)
 
-# chat_page = st.Page(
-#     page="pages/05_chat.py",
-#     title="AI 등산로 추천 페이지",
-#     icon="💬"
+chat_page = st.Page(
+    page="pages/05_chat.py",
+    title="AI 등산로 추천 페이지",
+    icon="💬"
+)
+
+# limtest_page = st.Page(
+#     page="pages/limtest.py",
+#     title="임혜윤테스트페이지",
+#     icon="🧐"
 # )
 
 # =============================================================================
@@ -59,7 +65,9 @@ home_page = st.Page(
 # =============================================================================
 pg = st.navigation({
     "메인": [home_page],
-    #"기능": [analysis_page, trail_page, mountain_page, chat_page]
+    "기능": [analysis_page, trail_page, mountain_page, chat_page
+           #,limtest_page
+           ]
 })
 
 # =============================================================================
