@@ -31,9 +31,14 @@ def load_mountain_path():
              df.columns = full_columns[:len(df.columns)]
         
         numeric_cols = ['난이도점수', '관광인프라점수', '매력종합점수', '주차장거리_m', '정류장거리_m', '총거리_km', '최고고도_m', 'Cluster']
+        
         for col in numeric_cols:
             if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+                # 주차장 거리는 데이터가 없으면 -1로 채움 (0m와 구분하기 위해)
+                if col == '주차장거리_m':
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(-1)
+                else:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         str_cols = ['주차장명', '정류장명', '위치']
         for col in str_cols:
@@ -71,7 +76,7 @@ st.header("🔍 맞춤 등산로 검색")
 difficulty_levels = ['입문', '초급', '중급', '상급', '최상급', '초인', '신']
 
 # -----------------------------------------------------------------------------
-# [변경] 클러스터 매핑 정의
+# [변경] 클러스터 매핑 정의 ("전체 보기" 제거, 순수 데이터만 남김)
 # -----------------------------------------------------------------------------
 cluster_map = {
     "🌸 계절매력": 0,
@@ -80,7 +85,6 @@ cluster_map = {
     "🌿 힐링": 4,
     "💎 오지/숨은명소": 5
 }
-# 선택지의 순서를 보장하기 위해 리스트 생성
 cluster_options = list(cluster_map.keys())
 
 # -----------------------------------------------------------------------------
@@ -131,7 +135,7 @@ st.pills(
     selection_mode="single",
     key="type_selection",
     on_change=set_search_condition,
-    default=cluster_options[0] # 기본값 선택
+    default=None # 기본값 없음
 )
 
 st.divider()
@@ -169,24 +173,30 @@ with col3:
 # 4. 데이터 필터링 [핵심 변경 구간]
 # -----------------------------------------------------------------------------
 try:
-    # 1) 난이도 필터 준비
+    # 1) 공통 필터 조건
     start_idx = difficulty_levels.index(diff_val[0])
     end_idx = difficulty_levels.index(diff_val[1])
     selected_levels = difficulty_levels[start_idx : end_idx + 1]
 
-    # 2) 선택된 클러스터 ID 가져오기
-    current_selection = st.session_state.get('type_selection')
-    target_cluster_id = cluster_map.get(current_selection)
-
-    # 3) 필터링 적용
-    # - Cluster 컬럼이 target_cluster_id와 같은지 확인
-    # - 난이도, 인프라, 주차장 거리는 슬라이더 값 적용
-    filtered_df = df[
-        (df['Cluster'] == target_cluster_id) &  # [추가] 클러스터 일치 여부
+    common_condition = (
         (df['난이도'].isin(selected_levels)) &
         (df['관광인프라점수'] >= infra_val[0]) & (df['관광인프라점수'] <= infra_val[1]) &
-        (df['주차장거리_m'] <= park_dist_val) 
-    ]
+        (df['주차장거리_m'] != -1) &            # [변경] -1(데이터 없음)인 경우만 제외
+        (df['주차장거리_m'] <= park_dist_val)   # 0m(바로 앞)인 경우는 여기에 포함되어 살아남음
+    )
+
+    # 2) 테마(Cluster) 필터링 로직
+    current_selection = st.session_state.get('type_selection')
+    
+    if current_selection is None:
+        filtered_df = df[common_condition]
+    else:
+        target_cluster_id = cluster_map.get(current_selection)
+        filtered_df = df[
+            (df['Cluster'] == target_cluster_id) & 
+            common_condition
+        ]
+        
 except Exception as e:
     st.error(f"필터링 오류 발생: {e}")
     filtered_df = pd.DataFrame()
