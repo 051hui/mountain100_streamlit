@@ -48,36 +48,14 @@ st.markdown(
         margin: 20px 0;
       }
       
+      /* 매력/등산로 버튼 스타일 */
+      .stButton > button {
+        height: 60px !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        padding: 16px 24px !important;
+      }
       
-      /* =========================
-         🥾 등산로 버튼만 스타일 적용
-         ========================= */
-
-      .trail-chip-area div.stButton > button {
-        padding: 6px 10px;
-        height: 38px;
-        font-size: 0.75rem;
-        border-radius: 10px;
-
-        background-color: #ecfdf5;
-        color: #065f46;
-        border: 1px solid #86efac;
-
-        font-weight: 500;
-        white-space: nowrap;
-      }
-
-      .trail-chip-area div.stButton > button:hover {
-        background-color: #d1fae5;
-        border-color: #34d399;
-        color: #064e3b;
-      }
-
-      .trail-chip-area div.stButton > button[kind="primary"] {
-        background-color: #22c55e !important;
-        color: white !important;
-        border-color: #16a34a !important;
-      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -94,13 +72,11 @@ def load_mountain_csv():
     df["lon"] = pd.to_numeric(df["lon"], errors="coerce")
     df = df.dropna(subset=["mountain_name", "lat", "lon"]).reset_index(drop=True)
     
-    # 영어 이름과 설명 컬럼이 없으면 빈 문자열로 초기화
     if "mountain_name_en" not in df.columns:
         df["mountain_name_en"] = ""
     if "description" not in df.columns:
         df["description"] = ""
     
-    # 결측값을 빈 문자열로 처리
     df["mountain_name_en"] = df["mountain_name_en"].fillna("")
     df["description"] = df["description"].fillna("")
     
@@ -113,7 +89,6 @@ def load_trail_data():
     df = pd.read_csv(csv_path)
     return df
 
-# ... (load_infra_data 함수는 기존 동일) ...
 @st.cache_data
 def load_infra_data():
     try:
@@ -127,9 +102,6 @@ def load_infra_data():
     except Exception:
         return pd.DataFrame()
 
-df_infra = load_infra_data()
-
-
 @st.cache_data
 def load_mountain_keywords():
     """산별 키워드 JSON 로드"""
@@ -137,27 +109,22 @@ def load_mountain_keywords():
         json_path = (Path(__file__).resolve().parent.parent / "data" / "mountain_keywords.json").resolve()
         
         if not json_path.exists():
-            st.error(f"파일을 찾을 수 없습니다: {json_path}")
             return {}
         
         if json_path.stat().st_size == 0:
-            st.error(f"파일이 비어있습니다: {json_path}")
             return {}
         
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
             
         if not data:
-            st.warning("키워드 데이터가 비어있습니다")
             return {}
             
         return data
         
     except json.JSONDecodeError as e:
-        st.error(f"JSON 파싱 에러: {e}")
         return {}
     except Exception as e:
-        st.error(f"파일 로드 에러: {e}")
         return {}
 
 @st.cache_data
@@ -168,6 +135,7 @@ def load_mask_image():
 
 df_m = load_mountain_csv()
 df_trails = load_trail_data()
+df_infra = load_infra_data()
 keywords_dict = load_mountain_keywords()
 mask_img = load_mask_image()
 
@@ -186,9 +154,9 @@ def generate_wordcloud(mountain_name, top_n=65):
     freq_top = dict(sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_n])
     
     if platform.system() == 'Windows':
-        path = 'C:/Windows/Fonts/malgun.ttf'  # 윈도우용 (맑은 고딕)
+        path = 'C:/Windows/Fonts/malgun.ttf'
     else:
-        path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"  # 맥용 (기존 코드)
+        path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
 
     wc = WordCloud(
             font_path=path,
@@ -219,12 +187,12 @@ def generate_wordcloud(mountain_name, top_n=65):
     return fig
 
 # -------------------------
-# 세션 상태
+# 세션 상태 초기화
 # -------------------------
 if "selected_mountain" not in st.session_state:
-    st.session_state.selected_mountain = df_m["mountain_name"].iloc[0]
+    st.session_state.selected_mountain = None  # ✅ 초기값을 None으로 변경
 if "view_mode" not in st.session_state:
-    st.session_state.view_mode = "attraction"
+    st.session_state.view_mode = None  # ✅ 초기값을 None으로 변경
 if "selected_course" not in st.session_state:
     st.session_state.selected_course = None
 if "selected_trail_data" not in st.session_state:
@@ -234,12 +202,12 @@ if "selected_trail_data" not in st.session_state:
 # 유틸: 선택 산 한 줄 가져오기
 # -------------------------
 def get_selected_row():
+    if st.session_state.selected_mountain is None:
+        return None
     row = df_m.loc[df_m["mountain_name"] == st.session_state.selected_mountain]
     if row.empty:
-        return df_m.iloc[0]
+        return None
     return row.iloc[0]
-
-sel = get_selected_row()
 
 # -------------------------
 # 상단 제목
@@ -248,7 +216,7 @@ st.markdown(
     """
     <div class="title-wrap">
       <h2>⛰️ 산 정보 조회</h2>
-      <div class="subtle">선택창에서 선정한 전국의 100대 명산의 정보를 조회하실 수 있습니다.</div>
+      <div class="subtle">지도에서 산을 클릭하거나 검색하여 정보를 확인하세요.</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -257,12 +225,18 @@ st.markdown(
 st.write("")
 
 # -------------------------
-# 산 선택 드롭다운
+# 산 선택 드롭다운 (항상 표시)
 # -------------------------
 st.markdown("##### 원하시는 산을 선택해 주세요.")
 
-mountain_list = df_m["mountain_name"].tolist()
-selected_idx = mountain_list.index(st.session_state.selected_mountain) if st.session_state.selected_mountain in mountain_list else 0
+mountain_list = ["선택 안 함"] + df_m["mountain_name"].tolist()  # ✅ "선택 안 함" 추가
+
+if st.session_state.selected_mountain is None:
+    selected_idx = 0
+elif st.session_state.selected_mountain in mountain_list:
+    selected_idx = mountain_list.index(st.session_state.selected_mountain)
+else:
+    selected_idx = 0
 
 new_selection = st.selectbox(
     "산 선택",
@@ -271,8 +245,17 @@ new_selection = st.selectbox(
     label_visibility="collapsed"
 )
 
-if new_selection != st.session_state.selected_mountain:
+# 드롭다운 선택 변경 감지
+if new_selection == "선택 안 함":
+    if st.session_state.selected_mountain is not None:
+        st.session_state.selected_mountain = None
+        st.session_state.view_mode = None
+        st.session_state.selected_course = None
+        st.session_state.selected_trail_data = None
+        st.rerun()
+elif new_selection != st.session_state.selected_mountain:
     st.session_state.selected_mountain = new_selection
+    st.session_state.view_mode = None  # ✅ 새로운 산 선택 시 view_mode 초기화
     st.session_state.selected_course = None
     st.session_state.selected_trail_data = None
     st.rerun()
@@ -280,10 +263,8 @@ if new_selection != st.session_state.selected_mountain:
 st.write("")
 st.write("")
 
-
-
 # -------------------------
-# (A) 지도 영역 (folium + 마커)
+# 지도 영역 (folium + 마커)
 # -------------------------
 center_lat = float(df_m["lat"].mean())
 center_lon = float(df_m["lon"].mean())
@@ -292,7 +273,7 @@ m = folium.Map(
     location=[center_lat, center_lon], 
     zoom_start=7, 
     control_scale=True,
-    prefer_canvas=True  # ✅ 성능 개선
+    prefer_canvas=True
 )
 
 for _, r in df_m.iterrows():
@@ -301,33 +282,62 @@ for _, r in df_m.iterrows():
     lon = float(r["lon"])
     
     if name == st.session_state.selected_mountain:
-        color = "red"
-        radius = 10
-        weight = 3
+        folium.Marker(
+            location=[lat, lon],
+            popup=folium.Popup(name, max_width=200),
+            tooltip=folium.Tooltip(name, permanent=False),
+            icon=folium.DivIcon(html=f'''
+                <div style="
+                    position: relative;
+                    width: 20px;
+                    height: 20px;
+                ">
+                    <div style="
+                        position: absolute;
+                        width: 20px;
+                        height: 20px;
+                        background-color: #ff0066;
+                        border-radius: 50%;
+                        animation: pulse 1.5s infinite;
+                    "></div>
+                    <div style="
+                        position: absolute;
+                        width: 20px;
+                        height: 20px;
+                        background-color: #ff0066;
+                        border-radius: 50%;
+                        box-shadow: 0 0 0 0 rgba(255, 0, 102, 1);
+                    "></div>
+                </div>
+                <style>
+                    @keyframes pulse {{
+                        0% {{ transform: scale(1); opacity: 1; }}
+                        50% {{ transform: scale(1.5); opacity: 0.5; }}
+                        100% {{ transform: scale(1); opacity: 1; }}
+                    }}
+                </style>
+            ''')
+        ).add_to(m)
     else:
-        color = "blue"
-        radius = 7
-        weight = 2
-
-    folium.CircleMarker(
-        location=[lat, lon],
-        radius=radius,
-        color=color,
-        fill=True,
-        fill_color=color,
-        fill_opacity=0.8,
-        weight=weight,
-        popup=folium.Popup(name, max_width=200),
-        tooltip=folium.Tooltip(name, permanent=False),
-    ).add_to(m)
+        folium.CircleMarker(
+            location=[lat, lon],
+            radius=6,
+            color="#00bcd4",
+            fill=True,
+            fill_color="#00bcd4",
+            fill_opacity=0.6,
+            weight=2,
+            popup=folium.Popup(name, max_width=200),
+            tooltip=folium.Tooltip(name, permanent=False),
+        ).add_to(m)
 
 # 지도 렌더링
 map_output = st_folium(
     m, 
     use_container_width=True, 
     height=500,
-    key="mountain_map",  # ✅ 고정 key
-    returned_objects=["last_object_clicked"]  # ✅ 필요한 이벤트만 받기
+    key="mountain_map",
+    returned_objects=["last_object_clicked"]
 )
 
 # 클릭 이벤트 처리
@@ -338,7 +348,6 @@ if map_output and map_output.get("last_object_clicked"):
         clicked_lat = clicked_obj["lat"]
         clicked_lon = clicked_obj["lng"]
         
-        # 클릭한 위치에서 가장 가까운 산 찾기
         distances = []
         for idx, r in df_m.iterrows():
             dist = (r["lat"] - clicked_lat) ** 2 + (r["lon"] - clicked_lon) ** 2
@@ -347,23 +356,33 @@ if map_output and map_output.get("last_object_clicked"):
         distances.sort()
         nearest_mountain = distances[0][1]
         
-        # 가장 가까운 산이 현재 선택과 다르고, 거리가 너무 멀지 않으면 선택
-        if nearest_mountain != st.session_state.selected_mountain and distances[0][0] < 1.0:  # ✅ 거리 임계값
+        if nearest_mountain != st.session_state.selected_mountain and distances[0][0] < 1.0:
             st.session_state.selected_mountain = nearest_mountain
+            st.session_state.view_mode = None  # ✅ 새로운 산 선택 시 view_mode 초기화
             st.session_state.selected_course = None
             st.session_state.selected_trail_data = None
             st.rerun()
 
+# ✅ 여기서부터는 산이 선택된 경우에만 표시
+if st.session_state.selected_mountain is None:
+    st.stop()  # ✅ 산이 선택되지 않았으면 여기서 종료
+
+# -------------------------
+# 선택된 산 정보 가져오기
+# -------------------------
+sel = get_selected_row()
+if sel is None:
+    st.stop()
+
 st.write("")
 st.write("")
 
 # -------------------------
-# (B) 산 상세 기본 정보 카드
+# 산 상세 기본 정보 카드
 # -------------------------
 left, right = st.columns([1, 1], gap="small")
 
 with left:
-    # 산 정보 카드
     mountain_name = sel['mountain_name']
     mountain_name_en = sel.get('mountain_name_en', '')
     description = sel.get('description', '')
@@ -372,9 +391,9 @@ with left:
     
     st.markdown(
         f"""
-        <div style="background: white; border-radius: 5px; padding: 15px; height: 100%; min-height: 400px; display: flex; flex-direction: column; text-align: center;">
+        <div style="background: white; border-radius: 5px; padding: 15px; height: 100%; min-height: 300px; display: flex; flex-direction: column; text-align: center; ">
           <div style="margin-bottom: clamp(8px, 1.5vw, 16px);">
-            <div style="margin: 20px 0 4px 0; font-size: clamp(1.5rem, 3vw, 2.8rem); font-weight: 700; color: #1f2937; text-align: center;">{mountain_name}</div>
+            <div style="margin: 0px 0 4px 0; font-size: clamp(1.5rem, 3vw, 2.8rem); font-weight: 700; color: #1f2937; text-align: center;">{mountain_name}</div>
             <div style="font-size: clamp(1.3rem, 2.5vw, 2.2rem); font-weight: 600; color: #659F34; ">{mountain_name_en}</div>
           </div>
           
@@ -394,9 +413,7 @@ with left:
         unsafe_allow_html=True,
     )
 
-
 with right:
-    # 산 이미지
     image_path = (Path(__file__).resolve().parent.parent / "images" / f"{mountain_name}.jpg").resolve()
     
     if image_path.exists():
@@ -423,46 +440,35 @@ with right:
 st.write("")
 
 # -------------------------
-# (C) 모드 버튼 (가로 배치)
+# 모드 선택 버튼 (산이 선택된 경우에만 표시)
 # -------------------------
-col1, col2 = st.columns(2, gap="medium")
-
-def set_mode(mode: str):
-    st.session_state.view_mode = mode
-    if mode == "attraction":
-        st.session_state.selected_course = None
-        st.session_state.selected_trail_data = None
-
-# with col1:
-#     btn_type = "primary" if st.session_state.view_mode == "weather" else "secondary"
-#     if st.button("📊 실시간 날씨 정보", use_container_width=True, type=btn_type):
-#         set_mode("weather")
-
-# with col2:
-#     btn_type = "primary" if st.session_state.view_mode == "fire_risk" else "secondary"
-#     if st.button("🏔️ 실시간 산불 위험도", use_container_width=True, type=btn_type):
-#         set_mode("fire_risk")
-
-st.write("")
-
 col3, col4 = st.columns(2, gap="medium")
 
 with col3:
     btn_type = "primary" if st.session_state.view_mode == "attraction" else "secondary"
-    if st.button("🌟 매력 확인하기", use_container_width=True, type=btn_type):
-        set_mode("attraction")
+    if st.button("🌟 매력 확인하기", use_container_width=True, type=btn_type, key="btn_attraction"):
+        st.session_state.view_mode = "attraction"
+        st.session_state.selected_course = None
+        st.session_state.selected_trail_data = None
+        st.rerun()
 
 with col4:
     btn_type = "primary" if st.session_state.view_mode == "course" else "secondary"
-    if st.button("🥾 등산로 코스 확인하기", use_container_width=True, type=btn_type):
-        set_mode("course")
+    if st.button("🥾 등산로 코스 확인하기", use_container_width=True, type=btn_type, key="btn_course"):
+        st.session_state.view_mode = "course"
+        st.rerun()
+
+# ✅ 모드가 선택되지 않았으면 여기서 종료
+if st.session_state.view_mode is None:
+    st.info("👆 위 버튼을 클릭하여 상세 정보를 확인하세요.")
+    st.stop()
 
 st.write("")
 st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
 st.write("")
 
 # -------------------------
-# (D) 모드별 렌더링
+# 모드별 렌더링
 # -------------------------
 if st.session_state.view_mode == "attraction":
 
@@ -592,15 +598,11 @@ if st.session_state.view_mode == "attraction":
                 </div>
             </div>
             """
-            st.markdown(html_content, unsafe_allow_html=True)                 
-
-
-# 등산로 코스 확인하기 섹션 수정
+            st.markdown(html_content, unsafe_allow_html=True)
 
 elif st.session_state.view_mode == "course":
     st.markdown("### 🥾 등산로 코스")
     
-    # 선택된 산의 등산로 목록 가져오기
     mountain_trails = df_trails[df_trails['산이름'] == st.session_state.selected_mountain].copy()
     
     if mountain_trails.empty:
@@ -609,58 +611,35 @@ elif st.session_state.view_mode == "course":
         st.caption(f"총 {len(mountain_trails)}개의 등산로가 있습니다.")
         st.write("")
         
-        # 코스명 리스트 생성
         trail_df = mountain_trails.copy()
         trail_df["코스명"] = trail_df["코스명"].fillna("코스").astype(str)
         trail_names = trail_df["코스명"].tolist()
         
-        # pills 기본값 설정
         default_selection = None
         if st.session_state.selected_course in trail_names:
             default_selection = st.session_state.selected_course
         
-        # pills 렌더링
         picked = st.pills(
             "코스 선택",
             trail_names,
             selection_mode="single",
             default=default_selection,
-            key=f"trail_pills_{st.session_state.selected_mountain}",  # ✅ 산 이름을 key에 포함
+            key=f"trail_pills_{st.session_state.selected_mountain}",
         )
         
-        # 선택 변경 감지 및 세션 상태 업데이트
         if picked:
             if picked != st.session_state.selected_course:
                 st.session_state.selected_course = picked
                 st.session_state.selected_trail_data = trail_df.loc[trail_df["코스명"] == picked].iloc[0]
-                st.rerun()  # ✅ rerun 추가
+                st.rerun()
         else:
-            # 선택 해제된 경우
             if st.session_state.selected_course is not None:
                 st.session_state.selected_course = None
                 st.session_state.selected_trail_data = None
         
         st.write("")
         
-        
-        
-        
-        # ========================================
-        # 🔥 여기부터 기존 코드를 함수 호출로 대체
-        # ========================================
         if not st.session_state.selected_course:
             st.info("코스를 하나 선택하면 아래에 코스 상세 정보가 나타납니다.")
         else:
-            # ✅ 기존에 있던 긴 코드들을 모두 삭제하고 아래 2줄만 남김
             show_trail_detail(st.session_state.selected_trail_data, df_infra)
-            
-            
-            
-
-elif st.session_state.view_mode == "weather":
-    st.markdown("### 📊 실시간 날씨 정보")
-    st.info("날씨 API 연동 예정")
-    
-elif st.session_state.view_mode == "fire_risk":
-    st.markdown("### 🏔️ 실시간 산불 위험도")
-    st.info("산불 위험도 API 연동 예정")

@@ -60,13 +60,20 @@ chat_page = st.Page(
 #     icon="🧐"
 # )
 
+chatbot_page = st.Page(
+    page="pages/chatbot_app.py",
+    title="제연튜터님챗봇페이지",
+    icon="🎄"
+)
+
 # =============================================================================
 # 네비게이션 구성 (st.navigation)
 # =============================================================================
 pg = st.navigation({
     "메인": [home_page],
     "기능": [analysis_page, trail_page, mountain_page, chat_page
-        #    ,limtest_page
+            # ,limtest_page
+            ,chatbot_page
            ]
 })
 
