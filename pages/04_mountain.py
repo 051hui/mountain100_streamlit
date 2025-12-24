@@ -4,13 +4,15 @@ import pandas as pd
 import plotly.graph_objects as go
 from pathlib import Path
 import json
+import os
 import numpy as np
 from PIL import Image
 from wordcloud import WordCloud
 import plotly.express as px
-
+import platform
 import folium
 from streamlit_folium import st_folium
+from utils.trail_detail import show_trail_detail
 
 st.set_page_config(layout="wide")
 
@@ -111,6 +113,23 @@ def load_trail_data():
     df = pd.read_csv(csv_path)
     return df
 
+# ... (load_infra_data 함수는 기존 동일) ...
+@st.cache_data
+def load_infra_data():
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(current_dir)
+        file_path = os.path.join(root_dir, 'data', '관광인프라.csv')
+        if os.path.exists(file_path):
+            return pd.read_csv(file_path)
+        else:
+            return pd.DataFrame()
+    except Exception:
+        return pd.DataFrame()
+
+df_infra = load_infra_data()
+
+
 @st.cache_data
 def load_mountain_keywords():
     """산별 키워드 JSON 로드"""
@@ -166,19 +185,24 @@ def generate_wordcloud(mountain_name, top_n=65):
     
     freq_top = dict(sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_n])
     
+    if platform.system() == 'Windows':
+        path = 'C:/Windows/Fonts/malgun.ttf'  # 윈도우용 (맑은 고딕)
+    else:
+        path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"  # 맥용 (기존 코드)
+
     wc = WordCloud(
-        font_path="/System/Library/Fonts/AppleSDGothicNeo.ttc",
-        background_color="white",
-        mask=mask_img,
-        width=1000,
-        height=800,
-        max_words=top_n,
-        prefer_horizontal=0.9,
-        collocations=False,
-        colormap='summer',
-        relative_scaling=0.5,
-        min_font_size=10
-    ).generate_from_frequencies(freq_top)
+            font_path=path,
+            background_color="white",
+            mask=mask_img,
+            width=1000,
+            height=800,
+            max_words=top_n,
+            prefer_horizontal=0.9,
+            collocations=False,
+            colormap='summer',
+            relative_scaling=0.5,
+            min_font_size=10
+        ).generate_from_frequencies(freq_top)
     
     img = wc.to_array()
     
@@ -618,67 +642,20 @@ elif st.session_state.view_mode == "course":
         
         st.write("")
         
-        # 코스가 선택되지 않았을 때
+        
+        
+        
+        # ========================================
+        # 🔥 여기부터 기존 코드를 함수 호출로 대체
+        # ========================================
         if not st.session_state.selected_course:
             st.info("코스를 하나 선택하면 아래에 코스 상세 정보가 나타납니다.")
         else:
-            # 선택된 코스의 상세 정보
-            selected_trail = st.session_state.selected_trail_data
+            # ✅ 기존에 있던 긴 코드들을 모두 삭제하고 아래 2줄만 남김
+            show_trail_detail(st.session_state.selected_trail_data, df_infra)
             
-            st.write("")
-            st.markdown(f"#### 🥾 {st.session_state.selected_course}")
             
-            top_l, top_r = st.columns([1.2, 1.8], gap="large")
             
-            with top_l:
-                st.markdown(
-                    '<div class="card soft" style="height:300px; display: flex; flex-direction: column; justify-content: center; align-items: center;"><div style="font-size: 24px; color: #6b7280;">🗺️ 코스 지도</div><div style="font-size: 14px; color: #9ca3af; margin-top: 8px;">GPX 시각화 예정</div></div>',
-                    unsafe_allow_html=True,
-                )
-            
-            with top_r:
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                
-                # 등산로 정보 표시
-                col_info1, col_info2 = st.columns(2)
-                
-                with col_info1:
-                    if '예상시간' in selected_trail and pd.notna(selected_trail['예상시간']):
-                        st.write(f"⏱️ **소요시간:** {selected_trail['예상시간']}")
-                    
-                    if '총거리_km' in selected_trail and pd.notna(selected_trail['총거리_km']):
-                        st.write(f"📏 **총 거리:** {selected_trail['총거리_km']:.1f} km")
-                    
-                    if '최고고도_m' in selected_trail and pd.notna(selected_trail['최고고도_m']):
-                        st.write(f"⛰️ **최고 고도:** {selected_trail['최고고도_m']:.0f} m")
-                
-                with col_info2:
-                    if '난이도' in selected_trail and pd.notna(selected_trail['난이도']):
-                        st.write(f"⭐ **난이도:** {selected_trail['난이도']}")
-                    
-                    if '누적상승_m' in selected_trail and pd.notna(selected_trail['누적상승_m']):
-                        st.write(f"📈 **누적 상승:** {selected_trail['누적상승_m']:.0f} m")
-                    
-                    if '유형설명' in selected_trail and pd.notna(selected_trail['유형설명']):
-                        st.write(f"🏔️ **유형:** {selected_trail['유형설명']}")
-                
-                st.write("")
-                
-                # 접근성 정보
-                if '주차장거리_m' in selected_trail and pd.notna(selected_trail['주차장거리_m']):
-                    st.write(f"🚗 **주차장까지:** {selected_trail['주차장거리_m']:.0f} m")
-                
-                if '정류장거리_m' in selected_trail and pd.notna(selected_trail['정류장거리_m']):
-                    st.write(f"🚌 **버스정류장까지:** {selected_trail['정류장거리_m']:.0f} m")
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            
-            st.write("")
-            st.write("")
-            
-            # 주변 정보
-            poi_type = st.radio("주변 정보 보기", ["음식점", "카페", "숙박", "관광명소"], horizontal=True)
-            st.markdown(f'<div class="card soft" style="padding: 40px; text-align: center;"><div style="font-size: 18px; color: #6b7280;">📍 {poi_type} 정보</div><div style="font-size: 14px; color: #9ca3af; margin-top: 8px;">다음 단계에서 구현 예정</div></div>', unsafe_allow_html=True)
 
 elif st.session_state.view_mode == "weather":
     st.markdown("### 📊 실시간 날씨 정보")

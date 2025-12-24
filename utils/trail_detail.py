@@ -1,0 +1,193 @@
+# utils/trail_detail.py (새 파일 생성)
+import streamlit as st
+import pandas as pd
+import os
+import gpxpy
+import folium
+from streamlit_folium import st_folium
+
+def show_trail_detail(selected_row, df_infra):
+    """
+    등산로 상세 정보 + 지도 + 인프라 표시 함수
+    
+    Parameters:
+    - selected_row: 선택된 등산로 데이터 (pandas Series)
+    - df_infra: 관광 인프라 데이터프레임
+    """
+    
+    mt_name = selected_row['산이름']
+    course_name = selected_row['코스명']
+    
+    st.subheader(f"🥾 {course_name}")
+    
+    # 인프라 데이터 필터링
+    pin_location = None
+    pin_popup = None
+    current_category = st.session_state.get('infra_category_radio', '음식점')
+    infra_display = pd.DataFrame()
+    
+    if not df_infra.empty:
+        if 'trail_code' in df_infra.columns:
+            infra_filtered = df_infra[df_infra['trail_code'] == course_name]
+        else:
+            infra_filtered = df_infra[df_infra['mountain_name'] == mt_name]
+        
+        infra_display = infra_filtered[infra_filtered['category'] == current_category].reset_index(drop=True)
+        
+        if 'infra_list' in st.session_state and st.session_state.infra_list['selection']['rows']:
+            sel_idx = st.session_state.infra_list['selection']['rows'][0]
+            if sel_idx < len(infra_display):
+                sel_infra_row = infra_display.iloc[sel_idx]
+                pin_location = [sel_infra_row['lat'], sel_infra_row['lng']]
+                pin_popup = sel_infra_row['place_name']
+    
+    # 지도 & 상세정보 레이아웃
+    col_map, col_info = st.columns([1.2, 1])
+    
+    with col_map:
+        _render_trail_map(mt_name, pin_location, pin_popup)
+    
+    with col_info:
+        _render_trail_info(selected_row)
+    
+    # 관광 인프라 리스트
+    if not infra_display.empty:
+        _render_infra_list(infra_display, current_category, pin_popup)
+    else:
+        st.info(f"선택하신 '{course_name}' 주변에는 해당 카테고리의 시설 정보가 없습니다.")
+
+
+def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
+    """GPX 경로 지도 렌더링"""
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    gpx_folder = os.path.join(base_path, 'data', '100대명산', mt_name)
+    gpx_file_path = None
+    
+    if os.path.exists(gpx_folder):
+        files = os.listdir(gpx_folder)
+        gpx_files = [f for f in files if f.endswith('.gpx')]
+        if gpx_files:
+            gpx_file_path = os.path.join(gpx_folder, gpx_files[0])
+    
+    if gpx_file_path and os.path.exists(gpx_file_path):
+        try:
+            with open(gpx_file_path, 'r', encoding='utf-8') as gpx_file:
+                gpx = gpxpy.parse(gpx_file)
+            
+            points = []
+            for track in gpx.tracks:
+                for segment in track.segments:
+                    for point in segment.points:
+                        points.append([point.latitude, point.longitude])
+            
+            if points:
+                start_pos = points[0]
+                m = folium.Map(location=start_pos, zoom_start=13)
+                folium.PolyLine(points, color="red", weight=5, opacity=0.8).add_to(m)
+                folium.Marker(points[0], popup="출발", icon=folium.Icon(color='green', icon='play')).add_to(m)
+                folium.Marker(points[-1], popup="도착", icon=folium.Icon(color='blue', icon='stop')).add_to(m)
+                
+                if pin_location:
+                    folium.Marker(
+                        pin_location,
+                        popup=pin_popup,
+                        icon=folium.Icon(color='orange', icon='star')
+                    ).add_to(m)
+                
+                st_folium(m, width=500, height=400)
+            else:
+                st.warning("GPX 경로 없음")
+        except Exception as e:
+            st.error(f"오류: {e}")
+    else:
+        st.container(height=400, border=True).info("GPX 파일 없음")
+
+
+def _render_trail_info(selected_row):
+    """등산로 상세 정보 렌더링"""
+    dist_str = f"{selected_row['총거리_km']} km"
+    time_str = f"{selected_row['예상시간']}"
+    alt_str = f"{int(selected_row['최고고도_m'])} m"
+    diff_str = f"{selected_row['세부난이도']}"
+    
+    p_name = str(selected_row.get('주차장명', '-'))
+    p_dist = selected_row.get('주차장거리_m', 0)
+    b_name = str(selected_row.get('정류장명', '-'))
+    b_dist = selected_row.get('정류장거리_m', 0)
+    
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.caption("⏱️ 소요 시간")
+            st.markdown(f":orange[**{time_str}**]")
+            st.caption("📏 총 거리")
+            st.markdown(f"**{dist_str}**")
+        with c2:
+            st.caption("⛰️ 최고 고도")
+            st.markdown(f"**{alt_str}**")
+            st.caption("💪 난이도")
+            st.markdown(f":green[**{diff_str}**]")
+        
+        st.divider()
+        
+        st.caption("🅿️ 주차장")
+        if p_name in ['-', 'nan', 'None'] or p_dist == 0:
+            st.markdown("-")
+        else:
+            st.markdown(f"**{p_name}** <span style='color:grey; font-size:0.8em'>({int(p_dist)}m)</span>", unsafe_allow_html=True)
+        
+        st.caption("🚏 버스 정류장")
+        if b_name in ['-', 'nan', 'None'] or b_dist == 0:
+            st.markdown("-")
+        else:
+            st.markdown(f"**{b_name}** <span style='color:grey; font-size:0.8em'>({int(b_dist)}m)</span>", unsafe_allow_html=True)
+
+
+def _render_infra_list(infra_display, current_category, pin_popup):
+    """관광 인프라 리스트 렌더링"""
+    categories = ["음식점", "카페", "숙박", "관광명소"]
+    
+    def reset_infra_selection():
+        if 'infra_list' in st.session_state:
+            del st.session_state['infra_list']
+    
+    st.radio(
+        "카테고리 선택",
+        categories,
+        index=categories.index(current_category) if current_category in categories else 0,
+        key="infra_category_radio",
+        horizontal=True,
+        on_change=reset_infra_selection,
+        label_visibility="collapsed"
+    )
+    
+    st.write("")
+    
+    infra_display['location_type'] = infra_display['base_type'].apply(
+        lambda x: '출발지' if x == 'start' else '도착지'
+    )
+    
+    cols_to_show = ['place_name', 'location_type', 'distance_m', 'address']
+    col_config = {
+        "place_name": st.column_config.TextColumn("장소명"),
+        "location_type": st.column_config.TextColumn("기준 위치"),
+        "distance_m": st.column_config.NumberColumn("거리", format="%d m"),
+        "address": st.column_config.TextColumn("주소")
+    }
+    
+    if current_category == '관광명소':
+        cols_to_show.insert(1, 'tour_spot_type')
+        col_config["tour_spot_type"] = st.column_config.TextColumn("구분")
+    
+    st.dataframe(
+        infra_display[cols_to_show],
+        key="infra_list",
+        on_select="rerun",
+        selection_mode="single-row",
+        use_container_width=True,
+        hide_index=True,
+        column_config=col_config
+    )
+    
+    if pin_popup:
+        st.info(f"📍 지도에 '{pin_popup}' 위치가 표시되었습니다. (주황색 별)")
