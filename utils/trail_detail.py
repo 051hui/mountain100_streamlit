@@ -118,25 +118,25 @@ def _render_trail_info(selected_row):
     with st.container(border=True):
         c1, c2 = st.columns(2)
         with c1:
-            st.caption("⏱️ 소요 시간")
+            st.caption("⏱️ 소요 시간", help="거리와 고도차를 반영한 추정 시간입니다. (평지 1km당 15분 + 상승 100m당 10분 + 하강 100m당 5분)")
             st.markdown(f":orange[**{time_str}**]")
-            st.caption("📏 총 거리")
+            st.caption("📏 총 거리", help="등산로 입구(들머리)에서 정상 또는 반환점까지 이동한 후 다시 돌아오는 총 산행 거리입니다.")
             st.markdown(f"**{dist_str}**")
         with c2:
-            st.caption("⛰️ 최고 고도")
+            st.caption("⛰️ 최고 고도", help="등산로에서 가장 높은 지점의 해발 고도입니다.")
             st.markdown(f"**{alt_str}**")
-            st.caption("💪 난이도")
+            st.caption("💪 난이도", help="거리·고도·경사도를 반영한 난이도입니다. (입문 < 초급 < 중급 < 상급 < 최상급 < 초인 < 신, 숫자가 클수록 어려움)")
             st.markdown(f":green[**{diff_str}**]")
         
         st.divider()
         
-        st.caption("🅿️ 주차장")
+        st.caption("🅿️ 주차장", help="등산로 입구(들머리)에서 가장 가까운 공영/사설 주차장까지의 직선 거리입니다.")
         if p_name in ['-', 'nan', 'None'] or p_dist == 0:
             st.markdown("-")
         else:
             st.markdown(f"**{p_name}** <span style='color:grey; font-size:0.8em'>({int(p_dist)}m)</span>", unsafe_allow_html=True)
         
-        st.caption("🚏 버스 정류장")
+        st.caption("🚏 버스 정류장", help="등산로 입구(들머리)에서 가장 가까운 버스 정류장까지의 직선 거리입니다.")
         if b_name in ['-', 'nan', 'None'] or b_dist == 0:
             st.markdown("-")
         else:

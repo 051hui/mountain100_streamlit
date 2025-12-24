@@ -138,7 +138,7 @@ st.pills(
     key="type_selection",
     on_change=set_search_condition,
     default=None,
-    help="리뷰 데이터 텍스트 마이닝을 통해 5가지 유형으로 군집화(Clustering)한 결과입니다."
+    help="사용자의 정성적 경험(리뷰 텍스트)과 정량적 환경 지표(관광 인프라, 주차장 거리)를 하이브리드로 분석하여 도출한 5가지 테마입니다."
 )
 
 st.divider()
@@ -154,7 +154,7 @@ with col1:
         value=st.session_state['diff_slider'],
         key="diff_slider" ,
         help="""거리와 누적 상승 고도를 기반으로 산출한 점수에 경사도 가중치를 적용했습니다.
-        점수를 기준으로 전체 데이터 내 상대적 순위(백분위)를 나누어 등급을 매겼습니다.
+        ※ 같은 등급 내에서는 숫자가 클수록 더 어렵습니다. (예: 초급1 < 초급3)
 
         [등급별 비율]
         • 입문 : 하위 5%
