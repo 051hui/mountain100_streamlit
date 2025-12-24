@@ -3,7 +3,7 @@ Streamlit 산·등산로 개인화 추천 시스템 (멀티페이지)
 
 실행 전:
 1. python train_model.py 실행하여 모델 저장 <-- 얜 아님(아마도)‼️
-2. .streamlit/secrets.toml에 GEMINI_API_KEY 설정‼️
+2. .streamlit/secrets.toml에 GEMINI_API_KEY 설정‼
 
 실행: streamlit run main.py
 """
