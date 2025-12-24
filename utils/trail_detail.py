@@ -94,7 +94,7 @@ def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
                         icon=folium.Icon(color='orange', icon='star')
                     ).add_to(m)
                 
-                st_folium(m, width=500, height=400)
+                st_folium(m, width=700, height=400)
             else:
                 st.warning("GPX 경로 없음")
         except Exception as e:
