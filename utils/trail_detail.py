@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import gpxpy
 import folium
+import re 
 from streamlit_folium import st_folium
 
 def show_trail_detail(selected_row, df_infra):
@@ -45,7 +46,7 @@ def show_trail_detail(selected_row, df_infra):
     col_map, col_info = st.columns([1.2, 1])
     
     with col_map:
-        _render_trail_map(mt_name, pin_location, pin_popup)
+        _render_trail_map(mt_name, course_name, pin_location, pin_popup)
     
     with col_info:
         _render_trail_info(selected_row)
@@ -57,7 +58,7 @@ def show_trail_detail(selected_row, df_infra):
         st.info(f"선택하신 '{course_name}' 주변에는 해당 카테고리의 시설 정보가 없습니다.")
 
 
-def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
+def _render_trail_map(mt_name, course_name, pin_location=None, pin_popup=None):
     """GPX 경로 지도 렌더링"""
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     gpx_folder = os.path.join(base_path, 'data', '100대명산', mt_name)
@@ -66,8 +67,33 @@ def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
     if os.path.exists(gpx_folder):
         files = os.listdir(gpx_folder)
         gpx_files = [f for f in files if f.endswith('.gpx')]
+        
         if gpx_files:
-            gpx_file_path = os.path.join(gpx_folder, gpx_files[0])
+            # -----------------------------------------------------------
+            # [변경 시작] 코스 번호와 일치하는 GPX 파일 찾기
+            # -----------------------------------------------------------
+            target_file = None
+            try:
+                # 1. 코스명에서 숫자 추출 (예: "가리산_02" -> 2)
+                # 만약 숫자가 없으면 에러가 나서 except로 빠지고 첫번째 파일 사용
+                c_nums = re.findall(r'\d+', course_name)
+                if c_nums:
+                    course_idx = int(c_nums[-1])  # 맨 뒤 숫자 사용
+
+                    # 2. 파일 리스트 뒤지기
+                    for f in gpx_files:
+                        f_nums = re.findall(r'\d+', f)
+                        if f_nums and int(f_nums[-1]) == course_idx:
+                            target_file = f
+                            break
+            except Exception:
+                pass
+
+            # 찾는 파일이 있으면 그거 쓰고, 없으면 그냥 첫 번째 파일(fallback) 사용
+            if target_file:
+                gpx_file_path = os.path.join(gpx_folder, target_file)
+            else:
+                gpx_file_path = os.path.join(gpx_folder, gpx_files[0])
     
     if gpx_file_path and os.path.exists(gpx_file_path):
         try:
