@@ -297,7 +297,7 @@ if not filtered_df.empty:
                      if points:
                          start_pos = points[0]
                          m = folium.Map(location=start_pos, zoom_start=13)
-                         folium.PolyLine(points, color="red", weight=5, opacity=0.8).add_to(m)
+                         folium.PolyLine(points, color="green", weight=5, opacity=0.8).add_to(m)
                          folium.Marker(points[0], popup="출발", icon=folium.Icon(color='green', icon='play')).add_to(m)
                          folium.Marker(points[-1], popup="도착", icon=folium.Icon(color='blue', icon='stop')).add_to(m)
                          
@@ -307,7 +307,7 @@ if not filtered_df.empty:
                                  popup=pin_popup, 
                                  icon=folium.Icon(color='orange', icon='star')
                              ).add_to(m)
-                         st_folium(m, width=500, height=400)
+                         st_folium(m, width=700, height=400)
                      else:
                          st.warning("GPX 경로 없음")
                  except Exception as e:
@@ -338,7 +338,7 @@ if not filtered_df.empty:
                      st.caption("⛰️ 최고 고도")
                      st.markdown(f"**{alt_str}**")
                      st.caption("💪 난이도")
-                     st.markdown(f":red[**{diff_str}**]")
+                     st.markdown(f":green[**{diff_str}**]")
 
                  st.divider()
 
