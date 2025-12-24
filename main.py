@@ -66,7 +66,7 @@ chat_page = st.Page(
 pg = st.navigation({
     "메인": [home_page],
     "기능": [analysis_page, trail_page, mountain_page, chat_page
-           #,limtest_page
+        #    ,limtest_page
            ]
 })
 
