@@ -138,7 +138,7 @@ st.pills(
     key="type_selection",
     on_change=set_search_condition,
     default=None,
-    help="사용자의 정성적 경험(리뷰 텍스트)과 정량적 환경 지표(관광 인프라, 주차장 거리)를 하이브리드로 분석하여 도출한 5가지 테마입니다."
+    help="사용자의 정성적 경험(리뷰 텍스트)과 정량적 환경 지표(관광 인프라, 주차장 거리)를 분석하여 도출한 5가지 테마입니다."
 )
 
 st.divider()
@@ -229,7 +229,7 @@ if not filtered_df.empty:
     event = st.dataframe(
         sorted_df[display_cols],
         hide_index=True,
-        use_container_width=True,
+        width='stretch',
         on_select="rerun",
         selection_mode="single-row",
         column_config={

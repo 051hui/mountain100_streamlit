@@ -184,7 +184,7 @@ def _render_infra_list(infra_display, current_category, pin_popup):
         key="infra_list",
         on_select="rerun",
         selection_mode="single-row",
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config=col_config
     )
