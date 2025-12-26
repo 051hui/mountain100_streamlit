@@ -1,4 +1,4 @@
-# pages/챗봇추천.py
+# pages/05_chatbot.py
 import pandas as pd
 import streamlit as st
 import os
@@ -207,13 +207,8 @@ def generate_trail_detail_explanation(client: GeminiClient, trail_name: str, tra
 # 메인 앱
 # -----------------------------------------------------------------------------
 def main():
-    st.set_page_config(
-        page_title="등산로 추천 챗봇",
-        page_icon="🏔️",
-        layout="wide"
-    )
     
-    st.title("🏔️ 등산로 추천 챗봇")
+    st.title("💬 AI 등산로 추천")
     st.caption("자연스러운 대화로 나에게 맞는 등산로를 찾아보세요!")
     
     # 데이터 로드

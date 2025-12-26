@@ -72,7 +72,7 @@ df_infra = load_infra_data()
 if df.empty:
     st.stop()
 
-st.header("🔍 맞춤 등산로 검색")
+st.header("🔍 맞춤 등산로 조회")
 
 difficulty_levels = ['입문', '초급', '중급', '상급', '최상급', '초인', '신']
 

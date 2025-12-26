@@ -159,16 +159,16 @@ def generate_wordcloud(mountain_name, top_n=65):
 
     wc = WordCloud(
             font_path=path,
-            background_color="white",
+            background_color="#ffffff",
             mask=mask_img,
             width=1000,
             height=800,
             max_words=top_n,
             prefer_horizontal=0.9,
             collocations=False,
-            colormap='summer',
+            colormap='gist_earth',
             relative_scaling=0.5,
-            min_font_size=10
+            min_font_size=12
         ).generate_from_frequencies(freq_top)
     
     img = wc.to_array()
