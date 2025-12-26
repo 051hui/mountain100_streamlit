@@ -104,7 +104,7 @@ with tab1:
     # 디자인 다듬기
     fig.update_layout(showlegend=False) # 범례 숨김 (x축에 있으므로)
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     # 데이터 정렬 (난이도 점수가 있다고 가정)
     # 만약 '난이도점수' 컬럼이 문자열이라면 숫자로 변환 필요: df['난이도점수'] = pd.to_numeric(df['난이도점수'])
     
@@ -157,7 +157,7 @@ with tab2:
                        labels={'총거리_km': '총거리 (km)', 'count': '코스 개수'},
                        color_discrete_sequence=['teal'])
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.subheader("🏔️등산로 고도 분포")
     st.caption('동네 뒷산 높이부터 2,000m급 고산까지')
@@ -165,7 +165,7 @@ with tab2:
                        labels={'최고고도_m': '최고고도 (m)', 'count': '코스 개수'},
                        color_discrete_sequence=['orange'])
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.subheader("📈거리 vs 고도 관계 (산점도)")
     st.caption('왼쪽 아래에서 오른쪽 위로 이어지는 난이도 스펙트럼')
@@ -187,7 +187,7 @@ with tab2:
     # 점 크기 및 투명도 조절 (겹친 점 보기 편하게)
     fig_scatter.update_traces(marker=dict(size=8, opacity=0.7))
     
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(fig_scatter, width='stretch')
 
 with tab3:
     st.subheader("🚗 자차 vs 🚌 버스 접근성 비교")
@@ -221,7 +221,7 @@ with tab3:
     # 3. 핵심: Y축 범위를 제한해서 '눌린' 그래프 펴주기
     fig_violin.update_yaxes(range=[0, 2.5], title_text="거리 (km)") 
     
-    st.plotly_chart(fig_violin, use_container_width=True)
+    st.plotly_chart(fig_violin, width='stretch')
 
     st.subheader("🏃‍♂️ 접근성과 난이도의 상관관계")
     st.caption("도심(주차장)에서 멀어질수록 산이 험해질까요?")
@@ -235,4 +235,4 @@ with tab3:
                                  labels={'주차장거리_m': '주차장 거리 (m)', '난이도점수': '난이도 점수'},
                                  title="주차장 거리 vs 난이도 점수")
     
-    st.plotly_chart(fig_access_diff, use_container_width=True)
+    st.plotly_chart(fig_access_diff, width='stretch')

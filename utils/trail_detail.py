@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import gpxpy
 import folium
+import re 
 from streamlit_folium import st_folium
 
 def show_trail_detail(selected_row, df_infra):
@@ -45,7 +46,7 @@ def show_trail_detail(selected_row, df_infra):
     col_map, col_info = st.columns([1.2, 1])
     
     with col_map:
-        _render_trail_map(mt_name, pin_location, pin_popup)
+        _render_trail_map(mt_name, course_name, pin_location, pin_popup)
     
     with col_info:
         _render_trail_info(selected_row)
@@ -57,7 +58,7 @@ def show_trail_detail(selected_row, df_infra):
         st.info(f"선택하신 '{course_name}' 주변에는 해당 카테고리의 시설 정보가 없습니다.")
 
 
-def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
+def _render_trail_map(mt_name, course_name, pin_location=None, pin_popup=None):
     """GPX 경로 지도 렌더링"""
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     gpx_folder = os.path.join(base_path, 'data', '100대명산', mt_name)
@@ -66,8 +67,33 @@ def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
     if os.path.exists(gpx_folder):
         files = os.listdir(gpx_folder)
         gpx_files = [f for f in files if f.endswith('.gpx')]
+        
         if gpx_files:
-            gpx_file_path = os.path.join(gpx_folder, gpx_files[0])
+            # -----------------------------------------------------------
+            # [변경 시작] 코스 번호와 일치하는 GPX 파일 찾기
+            # -----------------------------------------------------------
+            target_file = None
+            try:
+                # 1. 코스명에서 숫자 추출 (예: "가리산_02" -> 2)
+                # 만약 숫자가 없으면 에러가 나서 except로 빠지고 첫번째 파일 사용
+                c_nums = re.findall(r'\d+', course_name)
+                if c_nums:
+                    course_idx = int(c_nums[-1])  # 맨 뒤 숫자 사용
+
+                    # 2. 파일 리스트 뒤지기
+                    for f in gpx_files:
+                        f_nums = re.findall(r'\d+', f)
+                        if f_nums and int(f_nums[-1]) == course_idx:
+                            target_file = f
+                            break
+            except Exception:
+                pass
+
+            # 찾는 파일이 있으면 그거 쓰고, 없으면 그냥 첫 번째 파일(fallback) 사용
+            if target_file:
+                gpx_file_path = os.path.join(gpx_folder, target_file)
+            else:
+                gpx_file_path = os.path.join(gpx_folder, gpx_files[0])
     
     if gpx_file_path and os.path.exists(gpx_file_path):
         try:
@@ -94,7 +120,7 @@ def _render_trail_map(mt_name, pin_location=None, pin_popup=None):
                         icon=folium.Icon(color='orange', icon='star')
                     ).add_to(m)
                 
-                st_folium(m, width=500, height=400)
+                st_folium(m, width=700, height=400)
             else:
                 st.warning("GPX 경로 없음")
         except Exception as e:
@@ -118,25 +144,25 @@ def _render_trail_info(selected_row):
     with st.container(border=True):
         c1, c2 = st.columns(2)
         with c1:
-            st.caption("⏱️ 소요 시간")
+            st.caption("⏱️ 소요 시간", help="거리와 고도차를 반영한 추정 시간입니다. (평지 1km당 15분 + 상승 100m당 10분 + 하강 100m당 5분)")
             st.markdown(f":orange[**{time_str}**]")
-            st.caption("📏 총 거리")
+            st.caption("📏 총 거리", help="등산로 입구(들머리)에서 정상 또는 반환점까지 이동한 후 다시 돌아오는 총 산행 거리입니다.")
             st.markdown(f"**{dist_str}**")
         with c2:
-            st.caption("⛰️ 최고 고도")
+            st.caption("⛰️ 최고 고도", help="등산로에서 가장 높은 지점의 해발 고도입니다.")
             st.markdown(f"**{alt_str}**")
-            st.caption("💪 난이도")
+            st.caption("💪 난이도", help="거리·고도·경사도를 반영한 난이도입니다. (입문 < 초급 < 중급 < 상급 < 최상급 < 초인 < 신, 숫자가 클수록 어려움)")
             st.markdown(f":green[**{diff_str}**]")
         
         st.divider()
         
-        st.caption("🅿️ 주차장")
+        st.caption("🅿️ 주차장", help="등산로 입구(들머리)에서 가장 가까운 공영/사설 주차장까지의 직선 거리입니다.")
         if p_name in ['-', 'nan', 'None'] or p_dist == 0:
             st.markdown("-")
         else:
             st.markdown(f"**{p_name}** <span style='color:grey; font-size:0.8em'>({int(p_dist)}m)</span>", unsafe_allow_html=True)
         
-        st.caption("🚏 버스 정류장")
+        st.caption("🚏 버스 정류장", help="등산로 입구(들머리)에서 가장 가까운 버스 정류장까지의 직선 거리입니다.")
         if b_name in ['-', 'nan', 'None'] or b_dist == 0:
             st.markdown("-")
         else:
@@ -184,7 +210,7 @@ def _render_infra_list(infra_display, current_category, pin_popup):
         key="infra_list",
         on_select="rerun",
         selection_mode="single-row",
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config=col_config
     )

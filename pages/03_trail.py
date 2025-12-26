@@ -136,21 +136,32 @@ st.pills(
     selection_mode="single",
     key="type_selection",
     on_change=set_search_condition,
-    default=None # 기본값 없음
+    default=None,
+    help="사용자의 정성적 경험(리뷰 텍스트)과 정량적 환경 지표(관광 인프라, 주차장 거리)를 분석하여 도출한 5가지 테마입니다."
 )
 
 st.divider()
 
 st.markdown("##### 세부 조건을 조절해보세요")
 
-col1, col2, col3 = st.columns(3)
+col1, space1, col2, space2, col3= st.columns([1, 0.2, 1, 0.2, 1])
 
 with col1:
     diff_val = st.select_slider(
         "산행 난이도",
         options=difficulty_levels,
         value=st.session_state['diff_slider'],
-        key="diff_slider" 
+        key="diff_slider" ,
+        help="""거리와 누적 상승 고도를 기반으로 산출한 점수에 경사도 가중치를 적용했습니다.
+        ※ 같은 등급 내에서는 숫자가 클수록 더 어렵습니다. (예: 초급1 < 초급3)
+
+        [등급별 비율]
+        • 입문 : 하위 5%
+        • 초급 : 5 ~ 30% (25%)
+        • 중급 : 30 ~ 65% (35%)
+        • 상급 : 65 ~ 89% (24%)
+        • 최상급 : 89 ~ 97%
+        • 초인, 신 : 상위 3% 이내"""
     )
 
 with col2:
@@ -158,7 +169,8 @@ with col2:
         "관광 인프라 (점수)",
         min_value=0.0, max_value=10.0,
         value=st.session_state['infra_slider'],
-        key="infra_slider"
+        key="infra_slider",
+        help="등산로 반경 5km 내의 식당, 카페, 숙소, 관광지 수를 집계한 점수입니다.\n\n거리가 가까울수록 높은 가중치(1km 이내: 1.0, 3km 이내: 0.8, 5km 이내: 0.5)를 부여하고, 로그(ln) 함수를 적용하여 0~10점 척도로 환산했습니다."
     )
 
 with col3:
@@ -167,7 +179,8 @@ with col3:
         min_value=0, max_value=2000,
         step=100,
         value=st.session_state['park_dist_slider'],
-        key="park_dist_slider"
+        key="park_dist_slider",
+        help="등산로 입구(들머리)에서 가장 가까운 공영/사설 주차장까지의 직선 거리입니다."
     )
 
 # -----------------------------------------------------------------------------
@@ -203,7 +216,7 @@ except Exception as e:
     filtered_df = pd.DataFrame()
 
 # -----------------------------------------------------------------------------
-# 5. 결과 출력 (이후 코드는 기존과 동일)
+# 5. 결과 출력
 # -----------------------------------------------------------------------------
 st.write(f"검색 결과: **{len(filtered_df)}**개의 코스를 찾았습니다.")
 
@@ -215,14 +228,14 @@ if not filtered_df.empty:
     event = st.dataframe(
         sorted_df[display_cols],
         hide_index=True,
-        use_container_width=True,
+        width='stretch',
         on_select="rerun",
         selection_mode="single-row",
         column_config={
             "관광인프라점수": st.column_config.ProgressColumn("인프라", format="%.1f", min_value=0, max_value=10),
             "매력종합점수": st.column_config.NumberColumn("매력도", format="⭐ %.1f"),
             "주차장거리_m": st.column_config.NumberColumn("주차장", format="%d m"),
-            "총거리_km": st.column_config.NumberColumn("거리(km)", format="%.1f km"),
+            "총거리_km": st.column_config.NumberColumn("총 거리", format="%.1f km"),
             "최고고도_m": st.column_config.NumberColumn("고도", format="%d m")
         }
     )
