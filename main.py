@@ -20,6 +20,29 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
+# =============================================================================
+# 앱 전체 스타일 설정
+# =============================================================================
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap');
+    
+    html, body, [class*="css"], p, div, h1, h2, h3, h4, h5, h6, span, button, input, textarea, label {
+        font-family: 'IBM Plex Sans KR', sans-serif !important;
+    }
+    
+    .st-emotion-cache-ixgm6x, .st-emotion-cache-4si8ij, .st-emotion-cache-xt25cl {
+        font-family: 'Material Symbols Rounded' !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+
 # =============================================================================
 # 페이지 정의 (st.Page)
 # =============================================================================
@@ -48,22 +71,11 @@ mountain_page = st.Page(
     icon="⛰️"
 )
 
-chat_page = st.Page(
-    page="pages/05_chat.py",
-    title="AI 등산로 추천 페이지",
-    icon="💬"
-)
-
-# limtest_page = st.Page(
-#     page="pages/limtest.py",
-#     title="임혜윤테스트페이지",
-#     icon="🧐"
-# )
 
 chatbot_page = st.Page(
     page="pages/chatbot_app.py",
-    title="제연튜터님챗봇페이지",
-    icon="🎄"
+    title="AI 등산로 추천 페이지",
+    icon="💬"
 )
 
 # =============================================================================
@@ -71,10 +83,7 @@ chatbot_page = st.Page(
 # =============================================================================
 pg = st.navigation({
     "메인": [home_page],
-    "기능": [analysis_page, trail_page, mountain_page, chat_page
-            # ,limtest_page
-            ,chatbot_page
-           ]
+    "기능": [analysis_page, trail_page, mountain_page, chatbot_page]
 })
 
 # =============================================================================

@@ -14,7 +14,6 @@ import folium
 from streamlit_folium import st_folium
 from utils.trail_detail import show_trail_detail
 
-st.set_page_config(layout="wide")
 
 # -------------------------
 # 스타일
@@ -322,9 +321,9 @@ for _, r in df_m.iterrows():
         folium.CircleMarker(
             location=[lat, lon],
             radius=6,
-            color="#00bcd4",
+            color="#689634",
             fill=True,
-            fill_color="#00bcd4",
+            fill_color="#689634",
             fill_opacity=0.6,
             weight=2,
             popup=folium.Popup(name, max_width=200),
@@ -334,7 +333,7 @@ for _, r in df_m.iterrows():
 # 지도 렌더링
 map_output = st_folium(
     m, 
-    use_container_width=True, 
+    width="stretch", 
     height=500,
     key="mountain_map",
     returned_objects=["last_object_clicked"]
@@ -391,7 +390,7 @@ with left:
     
     st.markdown(
         f"""
-        <div style="background: white; border-radius: 5px; padding: 15px; height: 100%; min-height: 300px; display: flex; flex-direction: column; text-align: center; ">
+        <div style="background: rgba(0,0,0,0); border-radius: 5px; padding: 15px; height: 100%; min-height: 300px; display: flex; flex-direction: column; text-align: center; ">
           <div style="margin-bottom: clamp(8px, 1.5vw, 16px);">
             <div style="margin: 0px 0 4px 0; font-size: clamp(1.5rem, 3vw, 2.8rem); font-weight: 700; color: #1f2937; text-align: center;">{mountain_name}</div>
             <div style="font-size: clamp(1.3rem, 2.5vw, 2.2rem); font-weight: 600; color: #659F34; ">{mountain_name_en}</div>
@@ -417,7 +416,7 @@ with right:
     image_path = (Path(__file__).resolve().parent.parent / "images" / f"{mountain_name}.jpg").resolve()
     
     if image_path.exists():
-        st.image(str(image_path), use_container_width=True)
+        st.image(str(image_path), width="stretch")
     else:
         st.markdown(
             f"""
@@ -446,7 +445,7 @@ col3, col4 = st.columns(2, gap="medium")
 
 with col3:
     btn_type = "primary" if st.session_state.view_mode == "attraction" else "secondary"
-    if st.button("🌟 매력 확인하기", use_container_width=True, type=btn_type, key="btn_attraction"):
+    if st.button("🌟 매력 확인하기", width="stretch", type=btn_type, key="btn_attraction"):
         st.session_state.view_mode = "attraction"
         st.session_state.selected_course = None
         st.session_state.selected_trail_data = None
@@ -454,7 +453,7 @@ with col3:
 
 with col4:
     btn_type = "primary" if st.session_state.view_mode == "course" else "secondary"
-    if st.button("🥾 등산로 코스 확인하기", use_container_width=True, type=btn_type, key="btn_course"):
+    if st.button("🥾 등산로 코스 확인하기", width="stretch", type=btn_type, key="btn_course"):
         st.session_state.view_mode = "course"
         st.rerun()
 
@@ -506,10 +505,10 @@ if st.session_state.view_mode == "attraction":
             height=400,
             margin=dict(l=40, r=40, t=20, b=20),
             showlegend=False,
-            paper_bgcolor='white',
-            plot_bgcolor='white',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
             polar=dict(
-                bgcolor='white',
+                bgcolor='rgba(0,0,0,0)',
                 radialaxis=dict(
                     visible=True, 
                     range=[0, 10], 
@@ -523,13 +522,13 @@ if st.session_state.view_mode == "attraction":
             ),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with c2:
         wc_fig = generate_wordcloud(st.session_state.selected_mountain)
         
         if wc_fig:
-            st.plotly_chart(wc_fig, use_container_width=True)
+            st.plotly_chart(wc_fig, width='stretch')
         else:
             st.markdown(
                 """

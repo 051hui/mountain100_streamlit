@@ -7,7 +7,7 @@ import sys
 # 상위 디렉토리의 utils를 import하기 위해
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.router import route_intent
+from utils.intent_classifier import classify_intent_with_llm, extract_mountain_name
 from utils.llm_client import GeminiClient
 from utils.translator import translate_plan
 from utils.recommender import run_recommender
@@ -79,7 +79,7 @@ def generate_conversational_recommendation(client: GeminiClient, user_input: str
     
     # 추천 결과를 텍스트로 정리
     trails_info = []
-    for idx, row in results.head(3).iterrows():  # 상위 3개만
+    for idx, row in results.head(3).iterrows():
         trail_text = f"""
 {row['산이름']} {row['코스명']} ({row['위치']})
 - 난이도: {row['세부난이도']}
@@ -94,8 +94,12 @@ def generate_conversational_recommendation(client: GeminiClient, user_input: str
     
     trails_text = "\n\n".join(trails_info)
     
-    # LLM 프롬프트
     system_prompt = """당신은 친근한 등산로 추천 챗봇 '등사니'입니다.
+
+중요 규칙:
+- 제공된 등산로 데이터만 사용하세요
+- 데이터에 없는 산이나 코스를 언급하지 마세요
+- 제공된 정보 외에는 절대 만들어내지 마세요
 
 역할:
 - 사용자의 요청을 분석한 결과를 자연스럽게 설명합니다
@@ -103,33 +107,33 @@ def generate_conversational_recommendation(client: GeminiClient, user_input: str
 - 각 등산로의 특징을 구체적으로 설명합니다
 - 이모지를 적절히 사용하여 친근감을 줍니다
 
-응답 형식:
-1. 사용자 조건을 정리하여 확인
-2. 추천 등산로를 순서대로 소개 (각 등산로마다 추천 이유와 특징 설명)
-3. 가장 추천하는 코스를 강조하며 마무리
-4. 추가 질문 유도
+다양한 표현:
+- 매번 다른 방식으로 시작 (조건 정리/바로 추천/공감/질문 등)
+- 문장 길이와 이모지 사용량 변화
+- 설명 순서 변경
+- 추천 이유 표현 다양화
 
 주의사항:
-- 데이터에 없는 정보는 만들지 마세요
-- 자연스럽고 친근한 말투를 사용하세요
-- 각 등산로당 3-4문장 정도로 설명하세요"""
+- 데이터에 없는 정보는 절대 만들지 마세요
+- 제공된 등산로만 언급하세요
+- 자연스럽고 친근한 말투 사용
+- 매번 같은 패턴으로 답하지 마세요"""
 
     user_prompt = f"""사용자 요청: "{user_input}"
 
 추천된 등산로 정보:
 {trails_text}
 
-위 정보를 바탕으로 사용자에게 등산로를 자연스럽게 추천해주세요."""
+위 정보를 바탕으로 자연스럽게 추천해주세요.
+제공된 등산로만 언급하고, 매번 다른 스타일로 답변하세요."""
 
     try:
-        response = client.complete_text(system_prompt, user_prompt)
+        response = client.complete_text(system_prompt, user_prompt, temperature=1.0)
         return response
     except Exception as e:
-        # Fallback
-        fallback = f"""좋습니다! 사용자님의 조건을 정리하면:
-{plan.get('notes_for_ui', '맞춤 등산로를 찾았습니다')}
+        fallback = f"""좋습니다! 사용자님의 조건에 맞는 등산로를 찾았어요.
 
-🏔️ 사용자님의 성향에 맞는 등사니 추천 등산로
+🏔️ 추천 등산로
 
 """
         for idx, row in results.head(3).iterrows():
@@ -138,7 +142,6 @@ def generate_conversational_recommendation(client: GeminiClient, user_input: str
 특징: 총 {row['총거리_km']:.1f}km, 예상 시간 {row['예상시간']}
 
 """
-        
         fallback += "\n어떠세요? 더 궁금한 점이나 다른 옵션이 필요하시면 말씀해주세요! 🌲"
         return fallback
 
@@ -149,38 +152,28 @@ def generate_trail_detail_explanation(client: GeminiClient, trail_name: str, tra
     trail_info = f"""
 등산로: {trail_data['산이름']} {trail_data['코스명']}
 위치: {trail_data['위치']}
-유형: {trail_data['유형설명']}
-난이도: {trail_data['세부난이도']} (점수: {trail_data['난이도점수']})
-총 거리: {trail_data['총거리_km']:.1f}km (편도: {trail_data['편도거리_km']:.1f}km)
+난이도: {trail_data['세부난이도']}
+총 거리: {trail_data['총거리_km']:.1f}km
 최고 고도: {trail_data['최고고도_m']:.0f}m
-누적 상승: {trail_data['누적상승_m']:.0f}m
 예상 시간: {trail_data['예상시간']}
-출발 지점: 위도 {trail_data['출발_lat']}, 경도 {trail_data['출발_lon']}
-도착 지점: 위도 {trail_data['도착_lat']}, 경도 {trail_data['도착_lon']}
 주차장: {trail_data['주차장명']} (거리: {trail_data['주차장거리_m']:.0f}m)
 정류장: {trail_data['정류장명']} (거리: {trail_data['정류장거리_m']:.0f}m)
 관광 인프라 점수: {trail_data['관광인프라점수']:.1f}/10
 매력 종합 점수: {trail_data['매력종합점수']:.1f}점
-매력 요소:
-- 전망: {trail_data['전망']:.1f}
-- 힐링: {trail_data['힐링']:.1f}
-- 사진: {trail_data['사진']:.1f}
-- 등산로: {trail_data['등산로']:.1f}
-- 성취감: {trail_data['성취감']:.1f}
-- 계절매력: {trail_data['계절매력']:.1f}
+매력 요소: 전망 {trail_data['전망']:.1f}, 힐링 {trail_data['힐링']:.1f}, 사진 {trail_data['사진']:.1f}, 성취감 {trail_data['성취감']:.1f}, 계절매력 {trail_data['계절매력']:.1f}
 특출 매력: {trail_data['특출매력']} ({trail_data['특출점수']:.1f}점)
 """
     
-    system_prompt = """당신은 친근한 등산로 안내 챗봇입니다.
+    system_prompt = """친근한 등산로 안내 챗봇입니다.
 
-특정 등산로에 대해 자세히 설명할 때:
-1. 위치와 기본 정보를 먼저 소개
-2. 난이도, 거리, 시간 등 실용 정보 설명
-3. 교통/접근성 정보 (주차장, 대중교통)
-4. 매력 포인트를 구체적으로 설명
-5. 어떤 사람에게 추천하는지 마무리
+특정 등산로 상세 설명 시:
+1. 위치와 기본 정보 소개
+2. 난이도, 거리, 시간 등 실용 정보
+3. 교통/접근성 정보
+4. 매력 포인트 구체적 설명
+5. 어떤 사람에게 추천하는지
 
-자연스럽고 친근한 말투로 작성하되, 모든 정보는 제공된 데이터에 기반해야 합니다."""
+자연스럽고 친근한 말투로, 모든 정보는 제공된 데이터에 기반하세요."""
 
     user_prompt = f"""다음 등산로에 대해 자세히 설명해주세요:
 
@@ -189,10 +182,9 @@ def generate_trail_detail_explanation(client: GeminiClient, trail_name: str, tra
 사용자가 이 코스를 선택하는 데 도움이 되도록 상세하게 안내해주세요."""
 
     try:
-        response = client.complete_text(system_prompt, user_prompt)
+        response = client.complete_text(system_prompt, user_prompt, temperature=0.7)
         return response
     except Exception as e:
-        # Fallback
         return f"""{trail_data['위치']}에 위치한 **{trail_data['산이름']} {trail_data['코스명']}**에 대해 설명해드릴게요.
 
 **기본 정보**
@@ -206,8 +198,7 @@ def generate_trail_detail_explanation(client: GeminiClient, trail_name: str, tra
 - 대중교통: {trail_data['정류장명']} (입구에서 {trail_data['정류장거리_m']:.0f}m)
 
 **매력 포인트**
-이 코스의 가장 큰 매력은 **{trail_data['특출매력']}**입니다 ({trail_data['특출점수']:.1f}점).
-주변 관광 인프라도 {trail_data['관광인프라점수']:.1f}점으로 {'좋은' if trail_data['관광인프라점수'] >= 5 else '적당한'} 편입니다.
+이 코스의 가장 큰 매력은 **{trail_data['특출매력']}**입니다.
 
 더 궁금하신 점이 있으시면 말씀해주세요! 😊"""
 
@@ -235,7 +226,6 @@ def main():
     # 세션 상태 초기화
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        # 초기 인사 메시지
         st.session_state.messages.append({
             "role": "assistant",
             "content": """안녕하세요! 등산로 추천 챗봇 등사니입니다. ⛰️
@@ -291,14 +281,19 @@ def main():
         with st.chat_message("user"):
             st.markdown(user_input)
         
-        # 의도 분류
-        intent = route_intent(user_input)
+        # 의도 분류 (LLM 기반)
+        has_previous = st.session_state.last_results is not None and not st.session_state.last_results.empty
+        intent = classify_intent_with_llm(client, user_input, has_previous_results=has_previous)
         
         # Assistant 응답 생성
         with st.chat_message("assistant"):
             with st.spinner("생각 중..."):
                 
                 if intent in ("recommend", "refine"):
+                    # 특정 산이 언급되었는지 확인
+                    all_mountains = trails_df['산이름'].unique().tolist()
+                    mentioned_mountain = extract_mountain_name(user_input, all_mountains)
+                    
                     # LLM translation 수행
                     plan = translate_plan(
                         client, 
@@ -306,6 +301,14 @@ def main():
                         intent=intent,
                         last_plan=st.session_state.last_plan if intent == "refine" else None
                     )
+                    
+                    # 특정 산이 언급되었으면 필터링 추가
+                    if mentioned_mountain:
+                        if "exclude" not in plan:
+                            plan["exclude"] = {"mountains": [], "trails": []}
+                        all_mountains_set = set(trails_df['산이름'].unique())
+                        other_mountains = all_mountains_set - {mentioned_mountain}
+                        plan["exclude"]["mountains"] = list(other_mountains)
                     
                     # 추천 엔진 실행
                     results = run_recommender(trails_df, plan, top_k=5)
@@ -315,41 +318,41 @@ def main():
                         client, user_input, plan, results
                     )
                     
-                    # 응답 표시
                     st.markdown(response)
                     
-                    # 메시지 저장
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": response
                     })
                     
-                    # 상태 업데이트
                     st.session_state.last_plan = plan
                     st.session_state.last_results = results
                 
                 elif intent == "explain":
-                    # 특정 등산로에 대한 설명 요청
                     if st.session_state.last_results is None or st.session_state.last_results.empty:
                         response = "아직 추천 결과가 없어요. 먼저 등산로를 추천받아보세요! 😊"
                         st.markdown(response)
                     else:
-                        # 사용자가 언급한 산 이름 찾기
+                        # 사용자가 언급한 산/코스 찾기
                         mentioned_trail = None
+                        user_clean = user_input.replace(" ", "").replace("번", "").replace("코스", "")
+                        
                         for idx, row in st.session_state.last_results.iterrows():
-                            if row['산이름'] in user_input or row['코스명'] in user_input:
+                            mountain_clean = row['산이름'].replace(" ", "")
+                            course_clean = row['코스명'].replace(" ", "").replace("_", "")
+                            
+                            if (mountain_clean in user_clean or 
+                                course_clean in user_clean or
+                                row['산이름'] in user_input or 
+                                row['코스명'] in user_input):
                                 mentioned_trail = row
                                 break
                         
                         if mentioned_trail is not None:
-                            # 특정 등산로 상세 설명
                             response = generate_trail_detail_explanation(
-                                client,
-                                user_input,
-                                mentioned_trail
+                                client, user_input, mentioned_trail
                             )
                         else:
-                            # 일반적인 추천 이유 설명
                             try:
                                 top_items = []
                                 for idx, row in st.session_state.last_results.head(3).iterrows():
@@ -367,7 +370,8 @@ def main():
                                         user_input, 
                                         st.session_state.last_plan, 
                                         top_items
-                                    )
+                                    ),
+                                    temperature=0.7
                                 )
                             except Exception:
                                 response = "이전에 추천해드린 등산로들은 사용자님의 조건에 가장 잘 맞는 곳들이에요! 😊"
@@ -380,20 +384,76 @@ def main():
                     })
                 
                 elif intent == "question":
-                    # 데이터 기반 QA
-                    data_summary = f"""전체 등산로 수: {len(trails_df)}개
-평균 매력도: {trails_df['매력종합점수'].mean():.1f}점
-평균 인프라 점수: {trails_df['관광인프라점수'].mean():.1f}점"""
+                    # 특정 산에 대한 질문인지 확인
+                    all_mountains = trails_df['산이름'].unique().tolist()
+                    mentioned_mountain = extract_mountain_name(user_input, all_mountains)
                     
-                    try:
-                        response = client.complete_text(
-                            system_prompt=QA_SYSTEM_PROMPT,
-                            user_prompt=make_qa_user_prompt(user_input, data_summary)
-                        )
-                        st.markdown(response)
-                    except Exception:
-                        response = "죄송해요, 그 질문에 대한 정확한 답변이 어렵네요. 😅\n\n원하시는 등산 스타일을 말씀해주시면 맞춤 추천을 도와드릴게요!"
-                        st.markdown(response)
+                    if mentioned_mountain:
+                        mountain_trails = trails_df[trails_df['산이름'] == mentioned_mountain]
+                        
+                        if not mountain_trails.empty:
+                            trail_info = f"""
+{mentioned_mountain}에 대한 정보:
+- 총 {len(mountain_trails)}개의 코스
+- 평균 난이도: {mountain_trails['세부난이도'].mode()[0] if not mountain_trails['세부난이도'].mode().empty else '중급'}
+- 평균 총 거리: {mountain_trails['총거리_km'].mean():.1f}km
+- 평균 고도: {mountain_trails['최고고도_m'].mean():.0f}m
+- 위치: {mountain_trails.iloc[0]['위치']}
+- 주요 매력: {mountain_trails.iloc[0]['특출매력']}
+
+코스 목록:
+"""
+                            for idx, row in mountain_trails.iterrows():
+                                trail_info += f"- {row['코스명']}: 난이도 {row['세부난이도']}, 거리 {row['총거리_km']:.1f}km\n"
+                            
+                            system_prompt = """친근한 등산로 안내 챗봇입니다.
+특정 산 질문 답변 시:
+1. 기본 정보 소개
+2. 코스들 간단히 설명
+3. 사용자 조건(난이도 등) 언급 시 맞는 코스 추천
+4. 더 자세한 추천 유도
+
+자연스럽고 친근한 말투로 작성하세요."""
+                            
+                            user_prompt = f"""사용자 질문: "{user_input}"
+
+{mentioned_mountain} 데이터:
+{trail_info}
+
+위 정보로 자연스럽게 답변하고, 조건 언급 시 맞는 코스 추천해주세요."""
+                            
+                            try:
+                                response = client.complete_text(system_prompt, user_prompt, temperature=0.8)
+                                st.markdown(response)
+                            except Exception:
+                                response = f"""{mentioned_mountain}에 대해 알려드릴게요!
+
+{mentioned_mountain}는 {mountain_trails.iloc[0]['위치']}에 위치한 산으로, 총 {len(mountain_trails)}개의 코스가 있어요.
+
+주요 매력은 **{mountain_trails.iloc[0]['특출매력']}**이고, 평균적으로 {mountain_trails['총거리_km'].mean():.1f}km 정도입니다.
+
+어떤 스타일의 코스를 원하시는지 말씀해주시면 더 자세한 추천을 해드릴게요! 😊"""
+                                st.markdown(response)
+                        else:
+                            response = f"죄송해요, {mentioned_mountain}에 대한 정보를 찾을 수 없네요. 😅"
+                            st.markdown(response)
+                    else:
+                        data_summary = f"""전체 등산로 수: {len(trails_df)}개
+평균 매력도: {trails_df['매력종합점수'].mean():.1f}점
+평균 인프라 점수: {trails_df['관광인프라점수'].mean():.1f}점
+
+산 목록 (일부): {', '.join([str(m).strip() for m in trails_df['산이름'].unique()[:10]])}..."""
+                        
+                        try:
+                            response = client.complete_text(
+                                system_prompt=QA_SYSTEM_PROMPT,
+                                user_prompt=make_qa_user_prompt(user_input, data_summary),
+                                temperature=0.7
+                            )
+                            st.markdown(response)
+                        except Exception:
+                            response = "죄송해요, 그 질문에 대한 정확한 답변이 어렵네요. 😅\n\n원하시는 등산 스타일을 말씀해주시면 맞춤 추천을 도와드릴게요!"
+                            st.markdown(response)
                     
                     st.session_state.messages.append({
                         "role": "assistant",
@@ -401,14 +461,17 @@ def main():
                     })
                 
                 else:  # other
-                    response = """어떻게 도와드릴까요? 😊
+                    response = """죄송하지만 잘 이해하지 못했어요. 😅
 
-다음과 같이 말씀해주시면 좋아요:
+저는 등산로 추천 전문 챗봇이에요. 다음과 같이 말씀해주시면 도움을 드릴 수 있어요:
+
 • "힐링되는 조용한 곳 추천해줘"
 • "가족과 가기 좋은 쉬운 코스"
 • "전망 좋은 곳"
 • "좀 더 쉬운 곳으로" (이전 추천 수정)
-• "가리산 01 코스에 대해 더 설명해줘" (상세 설명)"""
+• "가리산 01 코스에 대해 더 설명해줘"
+
+등산로나 산에 대해 궁금한 점이 있으시면 편하게 물어보세요! 😊"""
                     
                     st.markdown(response)
                     st.session_state.messages.append({
