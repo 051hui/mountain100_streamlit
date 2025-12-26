@@ -1,2 +1,6 @@
 [theme]
-primaryColor = "#6b9730"
+primaryColor = "#759a4cff"        # 초록색 (산)
+backgroundColor = "#f7f6f0ff"      # 연한 베이지 (자연스러운)
+secondaryBackgroundColor = "#d2d9caff"  # 연한 초록 (사이드바)
+textColor = "#1F2937"           # 진한 회색 (가독성)
+

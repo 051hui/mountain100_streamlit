@@ -20,13 +20,14 @@ class GeminiClient:
         genai.configure(api_key=self.api_key)
         self._client = genai.GenerativeModel(model_name=self.model)
 
-    def complete_text(self, system_prompt: str, user_prompt: str) -> str:
+    def complete_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.7) -> str:
         """
         Gemini API를 사용하여 텍스트 생성
         
         Args:
             system_prompt: 시스템 프롬프트 (역할 정의)
             user_prompt: 사용자 프롬프트 (실제 요청)
+            temperature: 응답 다양성 (0.0~1.0, 높을수록 창의적)
             
         Returns:
             생성된 텍스트 (translation의 경우 JSON 문자열)
@@ -38,8 +39,16 @@ class GeminiClient:
                 system_instruction=system_prompt
             )
             
+            # generation_config 설정
+            generation_config = genai.types.GenerationConfig(
+                temperature=temperature
+            )
+            
             # 텍스트 생성
-            response = model.generate_content(user_prompt)
+            response = model.generate_content(
+                user_prompt,
+                generation_config=generation_config
+            )
             
             return response.text
             
