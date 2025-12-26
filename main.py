@@ -14,7 +14,7 @@ import streamlit as st
 # 앱 전체 설정
 # =============================================================================
 st.set_page_config(
-    page_title="산·등산로 개인화 추천 시스템",
+    page_title="오르樂 내리樂 : 산·등산로 추천 시스템",
     page_icon="⛰️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -55,26 +55,26 @@ home_page = st.Page(
 
 analysis_page = st.Page(
     page="pages/02_analysis.py",
-    title="분석 페이지",
+    title="등산로 분석",
     icon="🥾"
 )
 
 trail_page = st.Page(
     page="pages/03_trail.py",
-    title="등산로 조회 페이지",
+    title="맞춤 등산로 조회",
     icon="🔍"
 )
 
 mountain_page = st.Page(
     page="pages/04_mountain.py",
-    title="산 조회 페이지",
+    title="산 정보 조회",
     icon="⛰️"
 )
 
 
 chatbot_page = st.Page(
-    page="pages/chatbot_app.py",
-    title="AI 등산로 추천 페이지",
+    page="pages/05_chatbot.py",
+    title="AI 등산로 추천",
     icon="💬"
 )
 
