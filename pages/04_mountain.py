@@ -152,18 +152,30 @@ def generate_wordcloud(mountain_name, top_n=65):
     
     freq_top = dict(sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_n])
     
+    # -----------------------------------------------------------
+    # [수정] 변수명을 font_path로 통일했습니다.
+    # -----------------------------------------------------------
     if platform.system() == 'Windows':
         font_path = 'C:/Windows/Fonts/malgun.ttf'
     
     elif platform.system() == 'Darwin': # Mac
         font_path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
-        
+    
     else: # Linux (Streamlit Cloud)
-        # packages.txt로 설치하면 이 경로에 생깁니다.
+        # packages.txt에 fonts-nanum을 적었다면 이 경로에 설치됩니다.
         font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
 
-    wc = WordCloud(
-            font_path=path,
+    # 폰트가 없는 경우를 대비한 체크
+    if not os.path.exists(font_path):
+        # 폰트가 없으면 에러 로그를 남기고 기본 폰트(깨질 수 있음)라도 시도하거나 None 반환
+        print(f"⚠️ 폰트 경로를 찾을 수 없음: {font_path}")
+        # 리눅스라면 여기서 return None을 해서 앱이 죽는 걸 방지하는 게 좋습니다.
+        if platform.system() != 'Windows' and platform.system() != 'Darwin':
+             return None 
+
+    try:
+        wc = WordCloud(
+            font_path=font_path,  # 👈 여기가 'path'가 아니라 'font_path'여야 합니다!
             background_color="#ffffff",
             mask=mask_img,
             width=1000,
@@ -175,21 +187,24 @@ def generate_wordcloud(mountain_name, top_n=65):
             relative_scaling=0.5,
             min_font_size=12
         ).generate_from_frequencies(freq_top)
-    
-    img = wc.to_array()
-    
-    fig = px.imshow(img)
-    fig.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        height=400
-    )
-    fig.update_xaxes(showticklabels=False)
-    fig.update_yaxes(showticklabels=False)
-    
-    return fig
+        
+        img = wc.to_array()
+        
+        fig = px.imshow(img)
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            height=400
+        )
+        fig.update_xaxes(showticklabels=False)
+        fig.update_yaxes(showticklabels=False)
+        
+        return fig
 
+    except Exception as e:
+        st.error(f"워드클라우드 생성 중 오류: {e}")
+        return None
 # -------------------------
 # 세션 상태 초기화
 # -------------------------
