@@ -153,9 +153,14 @@ def generate_wordcloud(mountain_name, top_n=65):
     freq_top = dict(sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_n])
     
     if platform.system() == 'Windows':
-        path = 'C:/Windows/Fonts/malgun.ttf'
-    else:
-        path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
+        font_path = 'C:/Windows/Fonts/malgun.ttf'
+    
+    elif platform.system() == 'Darwin': # Mac
+        font_path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"
+        
+    else: # Linux (Streamlit Cloud)
+        # packages.txt로 설치하면 이 경로에 생깁니다.
+        font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
 
     wc = WordCloud(
             font_path=path,
